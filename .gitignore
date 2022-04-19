@@ -1,4 +1,6 @@
 .spotdl-cache
 venv
 .idea
-client.txt
+spotify_api_keys.txt
+youtube_api_keys.txt
+test.py
