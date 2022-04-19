@@ -1,7 +1,12 @@
 import os
+import pathlib
 
 from SpotifyAPI import SpotifyAPI
 from YoutubeAPI import YoutubeAPI
+from donwloader import download_song, replace_illegal_chars
+
+
+PATH_DOWNLOAD = os.path.join(os.path.expanduser("~"), "downloads")
 
 
 def get_spotify_client_id_and_secret(path="spotify_api_keys.txt") -> tuple:
@@ -26,6 +31,14 @@ def main():
 
     youtube_api_key = get_youtube_api_key()
     spotify_tracks = spotify_response["tracks"]["items"]
+
+    download_path_with_dir = os.path.join(
+        PATH_DOWNLOAD,
+        replace_illegal_chars(spotify_response["name"])
+    )
+    pathlib.Path(os.path.join(download_path_with_dir)).mkdir(exist_ok=True,
+                                                             parents=True)
+
     for spotify_track in spotify_tracks:
         duration = spotify_track["track"]["duration_ms"] // 1000
         track_name = spotify_track["track"]["name"]
@@ -37,8 +50,9 @@ def main():
         pytube_track, _ = YoutubeAPI(youtube_api_key).search_song(track_name,
                                                                   artists_name,
                                                                   duration)
-        # print(pt_object.thumbnail_url)
-        # break
+        print(pytube_track.watch_url)
+        download_song(pytube_track, download_path_with_dir)
+        break
 
 
 if __name__ == '__main__':
