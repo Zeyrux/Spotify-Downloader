@@ -21,7 +21,7 @@ def get_youtube_api_key(path="youtube_api_keys.txt"):
 
 def main():
     playlist_url = input("Playlist URL: ")
-    playlist_url = "https://open.spotify.com/playlist/0M5W3EwBG1ewC2ky7ND034?si=f112f80f11004560"
+    playlist_url = "https://open.spotify.com/playlist/0M5W3EwBG1ewC2ky7ND034?si=db824fd9c6034527"
 
     spotify_api_id, spotify_api_secret = get_spotify_client_id_and_secret()
     spotify_response = SpotifyAPI(
@@ -50,9 +50,7 @@ def main():
         pytube_track, _ = YoutubeAPI(youtube_api_key).search_song(track_name,
                                                                   artists_name,
                                                                   duration)
-        print(pytube_track.watch_url)
         download_song(pytube_track, download_path_with_dir)
-        break
 
 
 if __name__ == '__main__':

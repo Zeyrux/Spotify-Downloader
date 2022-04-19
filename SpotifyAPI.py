@@ -1,9 +1,9 @@
 import datetime as dt
 import base64
+import requests
 
 from urllib.parse import urlencode
 from urllib.parse import urlparse
-import requests
 
 
 class AccessToken:
