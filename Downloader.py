@@ -82,7 +82,7 @@ class Downloader:
     def _add_thumbnail(self):
         thumbnail_path = os.path.join(
             PATH_TEMP,
-            self.spotify.get_name() + THUMBNAIL_SUFFIX
+            replace_illegal_chars(self.spotify.get_name() + THUMBNAIL_SUFFIX)
         )
 
         # get thumbnail

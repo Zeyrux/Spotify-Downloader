@@ -7,6 +7,10 @@ from urllib.parse import urlparse
 from Downloader import replace_illegal_chars
 
 
+def is_url_playlist(url: str) -> bool:
+    return True if "playlist" in urlparse(url).path else False
+
+
 class AccessToken:
     def __init__(self, access_token: str, token_type: str, expires_in: float):
         self.token = access_token

@@ -2,7 +2,7 @@ import os
 import pathlib
 import shutil
 
-from SpotifyAPI import SpotifyAPI, Spotify
+from SpotifyAPI import SpotifyAPI, Spotify, is_url_playlist
 from YoutubeAPI import YoutubeAPI
 from Downloader import Downloader, replace_illegal_chars, PATH_TEMP
 
@@ -45,23 +45,37 @@ def main():
     # iterate throw each track and download it
     for track in spotify.get_generator_tracks():
         # search for song
-        pytube_track, _ = YoutubeAPI(
-            youtube_api_key
-        ).search_song(track.get_name(),
-                      track.get_artist_names(),
-                      track.get_duration_s())
-        print(f"\nFound Song: {pytube_track.title}: {pytube_track.watch_url}")
+        try:
+            pytube_track, _ = YoutubeAPI(
+                youtube_api_key
+            ).search_song(track.get_name(),
+                          track.get_artist_names(),
+                          track.get_duration_s())
+            print(f"\nFound Song: {pytube_track.title}: {pytube_track.watch_url}")
+        except Exception as ex:
+            print(f"Error at searching the song {track.get_name()} on youtube:"
+                  f"\n{ex.with_traceback()}")
+            continue
         # download song
-        Downloader(pytube_track,
-                   track,
-                   download_path_with_dir
-                   ).download_song()
+        try:
+            Downloader(pytube_track,
+                       track,
+                       download_path_with_dir
+                       ).download_song()
+        except Exception as ex:
+            print(f"Error on downloding the song at youtube:\n"
+                  f"{ex.with_traceback()}")
+            continue
         # move to downloads
-        src = os.path.join(PATH_TEMP, track.get_filename() + ".mp3")
-        target = os.path.join(PATH_DOWNLOAD,
-                              spotify.get_playlist_name(),
-                              track.get_filename() + ".mp3")
-        shutil.move(src, target)
+        try:
+            src = os.path.join(PATH_TEMP, track.get_filename() + ".mp3")
+            target = os.path.join(PATH_DOWNLOAD,
+                                  spotify.get_playlist_name(),
+                                  track.get_filename() + ".mp3")
+            shutil.move(src, target)
+        except Exception as ex:
+            print(f"Error at moving the song to downloads:\n"
+                  f"{ex.with_traceback()}")
 
 
 if __name__ == '__main__':

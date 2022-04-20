@@ -11,13 +11,16 @@ class YoutubeAPI:
                     track_name: str,
                     artists: list = None,
                     video_duration: int = None,
-                    max_results = 20
+                    max_results=20
                     ) -> tuple[pytube.YouTube, dict]:
+        # define args for search
         q = f"(intitle:{track_name})"
         if artists is not None:
             for artist in artists:
                 q += f"(intitle:{artist})"
         args = {"q": q, "maxResults": max_results}
+
+        # get best track
         tracks = self.youtube.search().list(part="snippet", **args).execute()
         for track in tracks["items"]:
             track_id = track["id"]["videoId"]
