@@ -11,7 +11,7 @@ class YoutubeAPI:
                     track_name: str,
                     artists: list = None,
                     video_duration: int = None,
-                    max_results = 50
+                    max_results = 20
                     ) -> tuple[pytube.YouTube, dict]:
         q = f"(intitle:{track_name})"
         if artists is not None:

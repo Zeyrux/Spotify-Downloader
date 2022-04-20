@@ -5,7 +5,6 @@ import pathlib
 import eyed3
 from eyed3.id3.frames import ImageFrame
 from urllib.request import urlretrieve
-from SpotifyAPI import Track
 
 
 def replace_illegal_chars(path: str) -> str:
@@ -28,7 +27,7 @@ THUMBNAIL_SUFFIX = "-thumbnail.png"
 class Downloader:
     def __init__(self,
                  video: pytube.YouTube,
-                 spotify: Track,
+                 spotify: "Track",
                  target: str,
                  clear_temp=True):
         assert os.path.isdir(target)

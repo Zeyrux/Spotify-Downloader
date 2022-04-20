@@ -4,6 +4,7 @@ import requests
 
 from urllib.parse import urlencode
 from urllib.parse import urlparse
+from Downloader import replace_illegal_chars
 
 
 class AccessToken:
@@ -36,7 +37,9 @@ class Track:
         return self.track["track"]["duration_ms"] // 1000
 
     def get_filename(self) -> str:
-        return f"{', '.join(self.get_artist_names())} - {self.get_name()}"
+        return replace_illegal_chars(
+            f"{', '.join(self.get_artist_names())} - {self.get_name()}"
+        )
 
     def get_name(self) -> str:
         return self.track["track"]["name"]
