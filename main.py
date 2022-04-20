@@ -28,6 +28,7 @@ def main():
     youtube_api_key = get_youtube_api_key()
 
     # get playlist
+    print("Get playlist")
     spotify_response = SpotifyAPI(
         spotify_api_id,
         spotify_api_secret
@@ -49,6 +50,7 @@ def main():
         ).search_song(track.get_name(),
                       track.get_artist_names(),
                       track.get_duration_s())
+        print(f"\nFound Song: {pytube_track.title}: {pytube_track.watch_url}")
         # download song
         Downloader(pytube_track,
                    track,

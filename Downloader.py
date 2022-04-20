@@ -43,16 +43,20 @@ class Downloader:
                 os.remove(os.path.join(PATH_TEMP, file))
 
     def download_song(self):
+        print("Download song")
         self.video.streams.get_audio_only().download(
             PATH_TEMP,
             self.spotify.get_filename() + FILE_SUFFIX_DOWNLOAD
         )
+        print("Format song")
         self._format_song()
+        print("Add song data")
         self._add_song_data()
+        print("Add thumbnail")
         self._add_thumbnail()
 
     def _format_song(self):
-        os.system(f"ffmpeg -i "
+        os.system(f"ffmpeg -loglevel quiet -i "
                   f"\"{os.path.join(PATH_TEMP, self.spotify.get_filename())}"
                   f"{FILE_SUFFIX_DOWNLOAD}\" "
                   f"\"{os.path.join(PATH_TEMP, self.spotify.get_filename())}"
