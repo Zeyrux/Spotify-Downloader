@@ -7,16 +7,6 @@ class YoutubeAPI:
         self.API_KEY = api_key
         self.youtube = build("youtube", "v3", developerKey=self.API_KEY)
 
-    def search_video(self,
-                     q,
-                     type="video",
-                     maxResults=50,
-                     videoDuration=None) -> dict:
-        args = {"q": q, "type": type, "maxResults": maxResults}
-        if videoDuration is not None:
-            args["video_duration"] = videoDuration
-        return self.youtube.Search().list(**args)
-
     def search_song(self,
                     track_name: str,
                     artists: list = None,

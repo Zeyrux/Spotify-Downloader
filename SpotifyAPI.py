@@ -22,6 +22,53 @@ class AccessToken:
         return dt.datetime.now() > self.expires
 
 
+class Track:
+    def __init__(self, spotify_track: dict):
+        self.track = spotify_track
+
+    def get_thumbnail_url(self) -> str:
+        return self.track["video_thumbnail"]["url"]
+
+    def get_duration_ms(self) -> int:
+        return self.track["track"]["duration_ms"]
+
+    def get_duration_s(self) -> int:
+        return self.track["track"]["duration_ms"] // 1000
+
+    def get_filename(self) -> str:
+        return f"{', '.join(self.get_artist_names())} - {self.get_name()}"
+
+    def get_name(self) -> str:
+        return self.track["track"]["name"]
+
+    def get_album_name(self) -> str:
+        return self.track["track"]["album"]["name"]
+
+    def get_artist_names(self) -> list[str]:
+        artists = []
+        for artist in self.track["track"]["artists"]:
+            artists.append(artist["name"])
+        return artists
+
+    def get_album_artist_names(self) -> list[str]:
+        artists = []
+        for artist in self.track["track"]["album"]["artists"]:
+            artists.append(artist["name"])
+        return artists
+
+
+class Spotify:
+    def __init__(self, spotify_response: dict):
+        self.spotify = spotify_response
+
+    def get_playlist_name(self) -> str:
+        return self.spotify["name"]
+
+    def get_generator_tracks(self):
+        for track in self.spotify["tracks"]["items"]:
+            yield Track(track)
+
+
 class SpotifyAPI:
 
     URL_TOKEN = "https://accounts.spotify.com/api/token"
