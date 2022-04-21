@@ -1,6 +1,7 @@
 import os
 import pathlib
 import shutil
+import traceback
 
 from SpotifyAPI import SpotifyAPI, Spotify, is_url_playlist
 from YoutubeAPI import YoutubeAPI
@@ -46,15 +47,15 @@ def main():
     for track in spotify.get_generator_tracks():
         # search for song
         try:
-            pytube_track, _ = YoutubeAPI(
+            pytube_track = YoutubeAPI(
                 youtube_api_key
             ).search_song(track.get_name(),
                           track.get_artist_names(),
                           track.get_duration_s())
             print(f"\nFound Song: {pytube_track.title}: {pytube_track.watch_url}")
-        except Exception as ex:
+        except Exception:
             print(f"Error at searching the song {track.get_name()} on youtube:"
-                  f"\n{ex.with_traceback()}")
+                  f"\n{traceback.format_exc()}")
             continue
         # download song
         try:
@@ -62,9 +63,9 @@ def main():
                        track,
                        download_path_with_dir
                        ).download_song()
-        except Exception as ex:
+        except Exception:
             print(f"Error on downloding the song at youtube:\n"
-                  f"{ex.with_traceback()}")
+                  f"{traceback.format_exc()}")
             continue
         # move to downloads
         try:
@@ -73,9 +74,9 @@ def main():
                                   spotify.get_playlist_name(),
                                   track.get_filename() + ".mp3")
             shutil.move(src, target)
-        except Exception as ex:
+        except Exception:
             print(f"Error at moving the song to downloads:\n"
-                  f"{ex.with_traceback()}")
+                  f"{traceback.format_exc()}")
 
 
 if __name__ == '__main__':
