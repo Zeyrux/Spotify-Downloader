@@ -3,7 +3,7 @@ import pathlib
 import shutil
 import traceback
 
-from SpotifyAPI import SpotifyAPI, Spotify, is_url_playlist
+from SpotifyAPI import SpotifyAPI, Spotify
 from YoutubeAPI import YoutubeAPI
 from Downloader import Downloader, replace_illegal_chars, PATH_TEMP
 
