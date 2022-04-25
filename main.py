@@ -43,7 +43,7 @@ def main():
     )
     pathlib.Path(os.path.join(download_path_with_dir)).mkdir(exist_ok=True,
                                                              parents=True)
-    # iterate throw each track and download it
+    # iterate through each track and download it
     for track in spotify.get_generator_tracks():
         # search for song
         try:
