@@ -49,9 +49,7 @@ def main():
         try:
             pytube_track = YoutubeAPI(
                 youtube_api_key
-            ).search_song(track.get_name(),
-                          track.get_artist_names(),
-                          track.get_duration_s())
+            ).search_song(track)
             print(f"\nFound Song: {pytube_track.title}: {pytube_track.watch_url}")
         except Exception:
             print(f"Error at searching the song {track.get_name()} on youtube:"

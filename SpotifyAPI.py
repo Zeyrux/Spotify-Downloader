@@ -42,7 +42,7 @@ class Track:
 
     def get_filename(self) -> str:
         return replace_illegal_chars(
-            f"{', '.join(self.get_artist_names())} - {self.get_name()}"
+            f"{self.get_name()} - {', '.join(self.get_artist_names())}"
         )
 
     def get_name(self) -> str:

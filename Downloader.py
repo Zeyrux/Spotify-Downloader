@@ -55,11 +55,16 @@ class Downloader:
         self._add_thumbnail()
 
     def _format_song(self):
-        os.system(f"ffmpeg -loglevel quiet -i "
-                  f"\"{os.path.join(PATH_TEMP, self.spotify.get_filename())}"
-                  f"{FILE_SUFFIX_DOWNLOAD}\" "
-                  f"\"{os.path.join(PATH_TEMP, self.spotify.get_filename())}"
-                  f".mp3\"")
+        os.system(
+            f"ffmpeg -loglevel quiet -i "
+            f"\"{os.path.join(PATH_TEMP, self.spotify.get_filename())}"
+            f"{FILE_SUFFIX_DOWNLOAD}\" "
+            f"-af silenceremove=start_periods=1:start_silence=0.1:"
+            f"start_threshold=-50dB,areverse,"
+            f"silenceremove=start_periods=1:start_silence=0.1:"
+            f"start_threshold=-50dB,areverse "
+            f"\"{os.path.join(PATH_TEMP, self.spotify.get_filename())}.mp3\""
+        )
         os.remove(f"{os.path.join(PATH_TEMP, self.spotify.get_filename())}"
                   f"{FILE_SUFFIX_DOWNLOAD}")
 
