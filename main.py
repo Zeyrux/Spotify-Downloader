@@ -30,11 +30,10 @@ def main():
 
     # get playlist
     print("Get playlist")
-    spotify_response = SpotifyAPI(
+    spotify = SpotifyAPI(
         spotify_api_id,
         spotify_api_secret
-    ).get_playlist(playlist_url)
-    spotify = Spotify(spotify_response)
+    ).get_tracks(playlist_url)
 
     # declare download path and create if necessary
     download_path_with_dir = os.path.join(

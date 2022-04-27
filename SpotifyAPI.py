@@ -7,6 +7,10 @@ from urllib.parse import urlparse
 from Downloader import replace_illegal_chars
 
 
+TYPE_PLAYLIST = "playlist"
+TYPE_ALBUM = "album"
+
+
 def is_url_playlist(url: str) -> bool:
     return True if "playlist" in urlparse(url).path else False
 
@@ -28,8 +32,9 @@ class AccessToken:
 
 
 class Track:
-    def __init__(self, spotify_track: dict):
+    def __init__(self, spotify_track: dict, type: str):
         self.track = spotify_track
+        self.type = type
 
     def get_thumbnail_url(self) -> str:
         return self.track["video_thumbnail"]["url"]
@@ -65,8 +70,9 @@ class Track:
 
 
 class Spotify:
-    def __init__(self, spotify_response: dict):
+    def __init__(self, spotify_response: dict, type: str):
         self.spotify = spotify_response
+        self.type = type
 
     def get_playlist_name(self) -> str:
         return self.spotify["name"]
@@ -112,9 +118,23 @@ class SpotifyAPI:
         url = f"{self.URL_SEARCH}?{data}"
         return requests.get(url, headers=self.HEADERS_SEARCH).json()
 
-    def get_playlist(self, url: str) -> dict:
+    def get_tracks(self, url: str) -> Spotify:
+        if "playlist" in url:
+            return self.get_playlist(url)
+        elif "album" in url:
+            return self.get_album(url)
+        raise Exception("Could not get tracks from Spotify")
+
+    def get_playlist(self, url: str) -> Spotify:
         playlist_id = urlparse(url).path.split("/")[-1]
-        return requests.get(
+        return Spotify(requests.get(
             f"https://api.spotify.com/v1/playlists/{playlist_id}",
             headers=self.HEADERS_SEARCH
-        ).json()
+        ).json(), TYPE_PLAYLIST)
+
+    def get_album(self, url: str) -> Spotify:
+        album_id = urlparse(url).path.split("/")[-1]
+        return Spotify(requests.get(
+            f"https://api.spotify.com/v1/albums/{album_id}",
+            headers=self.HEADERS_SEARCH
+        ).json(), TYPE_ALBUM)
