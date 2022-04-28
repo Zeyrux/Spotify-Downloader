@@ -2,10 +2,28 @@ from googleapiclient.discovery import build
 import pytube
 
 GET_BEST_SONGS_ARGS = [
-    {},
-    {"artists_intitle": False},
-    {"artists_intitle": False, "name_intitle": False},
-    {"artists_intitle": False, "name_intitle": False, "search_artists": False}
+    {
+        "max_results": 3,
+        "max_duration_difference": 5,
+        "name_intitle": False,
+        "artists_intitle": False
+    }, {
+        "max_results": 10,
+        "max_duration_difference": 10,
+        "name_intitle": False,
+        "artists_intitle": False
+    }, {
+        "max_results": 10,
+        "max_duration_difference": 15,
+        "name_intitle": False,
+        "artists_intitle": False
+    }, {
+        "max_results": 10,
+        "max_duration_difference": 15,
+        "name_intitle": False,
+        "artists_intitle": False,
+        "search_artists": False
+    }
 ]
 
 
@@ -16,12 +34,12 @@ class YoutubeAPI:
 
     def _get_best_song(self,
                        track: "Track",
-                       max_results: int,
                        order: str,
-                       max_duration_difference: int,
+                       max_results=10,
+                       max_duration_difference=15,
                        name_intitle=True,
-                       search_artists=True,
-                       artists_intitle=True) -> pytube.YouTube:
+                       artists_intitle=True,
+                       search_artists=True) -> pytube.YouTube:
         # define args for search
         q = f"({'intitle:' if name_intitle else ''}{track.get_name()})"
         if search_artists:
@@ -44,15 +62,11 @@ class YoutubeAPI:
                 return track_pytube
 
     def search_song(self,
-                    track: "Track",
-                    max_results=30,
-                    order="viewCount",
-                    max_duration_difference=30) -> pytube.YouTube:
+                    track,
+                    order="viewCount") -> pytube.YouTube:
         # get best song
         for args in GET_BEST_SONGS_ARGS:
-            track_pyt = self._get_best_song(track, max_results,
-                                            order, max_duration_difference,
-                                            **args)
+            track_pyt = self._get_best_song(track, order, **args)
             if track_pyt is not None:
                 return track_pyt
 

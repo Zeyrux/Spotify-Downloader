@@ -27,7 +27,7 @@ THUMBNAIL_SUFFIX = "-thumbnail.png"
 class Downloader:
     def __init__(self,
                  video: pytube.YouTube,
-                 spotify: "Track",
+                 spotify,
                  target: str,
                  clear_temp=True):
         assert os.path.isdir(target)
@@ -91,7 +91,7 @@ class Downloader:
         )
 
         # get thumbnail
-        thumbnail_url = self.spotify.get_thumbnail_url()
+        thumbnail_url = self.spotify.get_album_thumbnail_url()
         if thumbnail_url is None:
             thumbnail_url = self.video.thumbnail_url
         urlretrieve(thumbnail_url, thumbnail_path)

@@ -2,7 +2,6 @@ import datetime as dt
 import base64
 import requests
 
-from urllib.parse import urlencode
 from urllib.parse import urlparse
 from Downloader import replace_illegal_chars
 
@@ -31,19 +30,18 @@ class AccessToken:
         return dt.datetime.now() > self.expires
 
 
-class Track:
-    def __init__(self, spotify_track: dict, type: str):
+class TrackPlaylist:
+    def __init__(self, spotify_track: dict):
         self.track = spotify_track
-        self.type = type
 
-    def get_thumbnail_url(self) -> str:
-        return self.track["video_thumbnail"]["url"]
+    def get_album_thumbnail_url(self) -> str:
+        return self.track["track"]["album"]["images"][0]["url"]
 
     def get_duration_ms(self) -> int:
         return self.track["track"]["duration_ms"]
 
     def get_duration_s(self) -> int:
-        return self.track["track"]["duration_ms"] // 1000
+        return round(self.track["track"]["duration_ms"] / 1000)
 
     def get_filename(self) -> str:
         return replace_illegal_chars(
@@ -69,17 +67,63 @@ class Track:
         return artists
 
 
+class TrackAlbum:
+    def __init__(self, spotify_track: dict, album: dict):
+        self.track = spotify_track
+        self.album = album
+
+    def get_album_thumbnail_url(self) -> str:
+        return self.album["images"][0]["url"]
+
+    def get_duration_ms(self) -> int:
+        return self.track["duration_ms"]
+
+    def get_duration_s(self) -> int:
+        return round(self.track["duration_ms"] / 1000)
+
+    def get_filename(self) -> str:
+        return replace_illegal_chars(
+            f"{self.get_name()} - {', '.join(self.get_artist_names())}"
+        )
+
+    def get_name(self) -> str:
+        return self.track["name"]
+
+    def get_album_name(self) -> str:
+        return self.album["name"]
+
+    def get_artist_names(self) -> list[str]:
+        artists = []
+        for artist in self.track["artists"]:
+            artists.append(artist["name"])
+        return artists
+
+    def get_album_artist_names(self) -> list[str]:
+        artists = []
+        for artist in self.album["artists"]:
+            artists.append(artist["name"])
+        return artists
+
+
 class Spotify:
-    def __init__(self, spotify_response: dict, type: str):
+    def __init__(self, spotify_response: dict, type: str, album=None):
         self.spotify = spotify_response
+        self.album = album
         self.type = type
 
-    def get_playlist_name(self) -> str:
-        return self.spotify["name"]
+    def get_name(self) -> str:
+        if self.type == TYPE_PLAYLIST:
+            return self.spotify["name"]
+        if self.type == TYPE_ALBUM:
+            return self.album["name"]
 
     def get_generator_tracks(self):
-        for track in self.spotify["tracks"]["items"]:
-            yield Track(track)
+        if self.type == TYPE_PLAYLIST:
+            for track in self.spotify["tracks"]["items"]:
+                yield TrackPlaylist(track)
+        if self.type == TYPE_ALBUM:
+            for track in self.spotify["items"]:
+                yield TrackAlbum(track, self.album)
 
 
 class SpotifyAPI:
@@ -113,11 +157,6 @@ class SpotifyAPI:
             raise Exception(f"could not authorizse STATUS: {response.status_code}")
         return AccessToken.from_json(response.json())
 
-    def search(self, query: str, search_type: str) -> dict:
-        data = urlencode({"q": query, "type": search_type})
-        url = f"{self.URL_SEARCH}?{data}"
-        return requests.get(url, headers=self.HEADERS_SEARCH).json()
-
     def get_tracks(self, url: str) -> Spotify:
         if "playlist" in url:
             return self.get_playlist(url)
@@ -134,7 +173,12 @@ class SpotifyAPI:
 
     def get_album(self, url: str) -> Spotify:
         album_id = urlparse(url).path.split("/")[-1]
-        return Spotify(requests.get(
+        tracks = requests.get(
+            f"https://api.spotify.com/v1/albums/{album_id}/tracks",
+            headers=self.HEADERS_SEARCH
+        ).json()
+        album = requests.get(
             f"https://api.spotify.com/v1/albums/{album_id}",
             headers=self.HEADERS_SEARCH
-        ).json(), TYPE_ALBUM)
+        ).json()
+        return Spotify(tracks, TYPE_ALBUM, album=album)

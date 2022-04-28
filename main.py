@@ -3,7 +3,7 @@ import pathlib
 import shutil
 import traceback
 
-from SpotifyAPI import SpotifyAPI, Spotify
+from SpotifyAPI import SpotifyAPI
 from YoutubeAPI import YoutubeAPI
 from Downloader import Downloader, replace_illegal_chars, PATH_TEMP
 
@@ -22,14 +22,14 @@ def get_youtube_api_key(path="youtube_api_keys.txt"):
 
 
 def main():
-    playlist_url = input("Playlist URL: ")
+    playlist_url = input("Spotify URL: ")
 
     # get keys
     spotify_api_id, spotify_api_secret = get_spotify_client_id_and_secret()
     youtube_api_key = get_youtube_api_key()
 
     # get playlist
-    print("Get playlist")
+    print("Get Tracks")
     spotify = SpotifyAPI(
         spotify_api_id,
         spotify_api_secret
@@ -38,7 +38,7 @@ def main():
     # declare download path and create if necessary
     download_path_with_dir = os.path.join(
         PATH_DOWNLOAD,
-        replace_illegal_chars(spotify.get_playlist_name())
+        replace_illegal_chars(spotify.get_name())
     )
     pathlib.Path(os.path.join(download_path_with_dir)).mkdir(exist_ok=True,
                                                              parents=True)
@@ -49,7 +49,8 @@ def main():
             pytube_track = YoutubeAPI(
                 youtube_api_key
             ).search_song(track)
-            print(f"\nFound Song: {pytube_track.title}: {pytube_track.watch_url}")
+            print(f"\nFound Song: {pytube_track.title}: "
+                  f"{pytube_track.watch_url}")
         except Exception:
             print(f"Error at searching the song {track.get_name()} on youtube:"
                   f"\n{traceback.format_exc()}")
@@ -68,7 +69,7 @@ def main():
         try:
             src = os.path.join(PATH_TEMP, track.get_filename() + ".mp3")
             target = os.path.join(PATH_DOWNLOAD,
-                                  spotify.get_playlist_name(),
+                                  spotify.get_name(),
                                   track.get_filename() + ".mp3")
             shutil.move(src, target)
         except Exception:
