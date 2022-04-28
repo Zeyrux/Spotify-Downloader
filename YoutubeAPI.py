@@ -1,4 +1,7 @@
-from googleapiclient.discovery import build
+import time
+from itertools import count
+
+from googleapiclient.errors import HttpError
 import pytube
 
 GET_BEST_SONGS_ARGS = [
@@ -28,9 +31,21 @@ GET_BEST_SONGS_ARGS = [
 
 
 class YoutubeAPI:
-    def __init__(self, api_key):
-        self.API_KEY = api_key
-        self.youtube = build("youtube", "v3", developerKey=self.API_KEY)
+    def __init__(self, yt_apps: "YoutubeAppsBuilder"):
+        self.yt_apps = yt_apps
+
+    def _search_tracks_youtube(self, args) -> dict:
+        for i in count():
+            try:
+                if i == len(self.yt_apps):
+                    print("MAX QUOTA REACHED!\n"
+                          "add more keys or wait some time...")
+                    exit(-1)
+                a = self.yt_apps.get_app().search().list(part="snippet",
+                                                         **args).execute()
+                return a
+            except HttpError as e:
+                time.sleep(0.1)
 
     def _get_best_song(self,
                        track: "Track",
@@ -50,8 +65,8 @@ class YoutubeAPI:
                 "order": order}
 
         # get best track
-        tracks_found = self.youtube.search().list(part="snippet",
-                                                  **args).execute()
+        tracks_found = self._search_tracks_youtube(args)
+
         for track_found in tracks_found["items"]:
             url = f"https://www.youtube.com/watch?v=" \
                   f"{track_found['id']['videoId']}"

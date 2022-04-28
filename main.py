@@ -6,6 +6,7 @@ import traceback
 from SpotifyAPI import SpotifyAPI
 from YoutubeAPI import YoutubeAPI
 from Downloader import Downloader, replace_illegal_chars, PATH_TEMP
+from YoutubeAppsBuilder import YoutubeAppsBuilder
 
 
 PATH_DOWNLOAD = os.path.join(os.path.expanduser("~"), "downloads")
@@ -17,16 +18,12 @@ def get_spotify_client_id_and_secret(path="spotify_api_keys.txt") -> tuple:
     return tuple(open(path, "r").read().split("\n"))
 
 
-def get_youtube_api_key(path="youtube_api_keys.txt"):
-    return open(path, "r").read()
-
-
 def main():
     playlist_url = input("Spotify URL: ")
 
     # get keys
     spotify_api_id, spotify_api_secret = get_spotify_client_id_and_secret()
-    youtube_api_key = get_youtube_api_key()
+    yt_apps = YoutubeAppsBuilder()
 
     # get playlist
     print("Get Tracks")
@@ -47,7 +44,7 @@ def main():
         # search for song
         try:
             pytube_track = YoutubeAPI(
-                youtube_api_key
+                yt_apps
             ).search_song(track)
             print(f"\nFound Song: {pytube_track.title}: "
                   f"{pytube_track.watch_url}")
