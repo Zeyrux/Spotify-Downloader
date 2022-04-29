@@ -13,7 +13,6 @@ class YoutubeAppsBuilder:
 
     def get_app(self) -> str:
         self.cur_app += 1
-        return self.apps[4]
         return self.apps[self.cur_app % len(self.apps)]
 
     def __len__(self):
