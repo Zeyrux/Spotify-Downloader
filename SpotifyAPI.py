@@ -8,6 +8,7 @@ from Downloader import replace_illegal_chars
 
 TYPE_PLAYLIST = "playlist"
 TYPE_ALBUM = "album"
+TYPE_TRACK = "track"
 
 
 def is_url_playlist(url: str) -> bool:
@@ -105,6 +106,43 @@ class TrackAlbum:
         return artists
 
 
+class TrackSingle:
+    def __init__(self, spotify_track: dict):
+        self.track = spotify_track
+
+    def get_album_thumbnail_url(self) -> str:
+        return self.track["album"]["images"][0]["url"]
+
+    def get_duration_ms(self) -> int:
+        return self.track["duration_ms"]
+
+    def get_duration_s(self) -> int:
+        return round(self.track["duration_ms"] / 1000)
+
+    def get_filename(self) -> str:
+        return replace_illegal_chars(
+            f"{self.get_name()} - {', '.join(self.get_artist_names())}"
+        )
+
+    def get_name(self) -> str:
+        return self.track["name"]
+
+    def get_album_name(self) -> str:
+        return self.track["album"]["name"]
+
+    def get_artist_names(self) -> list[str]:
+        artists = []
+        for artist in self.track["artists"]:
+            artists.append(artist["name"])
+        return artists
+
+    def get_album_artist_names(self) -> list[str]:
+        artists = []
+        for artist in self.track["album"]["artists"]:
+            artists.append(artist["name"])
+        return artists
+
+
 class Spotify:
     def __init__(self, spotify_response: dict, type: str, album=None):
         self.spotify = spotify_response
@@ -116,6 +154,8 @@ class Spotify:
             return self.spotify["name"]
         if self.type == TYPE_ALBUM:
             return self.album["name"]
+        if self.type == TYPE_TRACK:
+            return self.spotify["name"]
 
     def get_generator_tracks(self):
         if self.type == TYPE_PLAYLIST:
@@ -124,6 +164,8 @@ class Spotify:
         if self.type == TYPE_ALBUM:
             for track in self.spotify["items"]:
                 yield TrackAlbum(track, self.album)
+        if self.type == TYPE_TRACK:
+            yield TrackSingle(self.spotify)
 
 
 class SpotifyAPI:
@@ -168,6 +210,10 @@ class SpotifyAPI:
 
     def get_track(self, url: str) -> Spotify:
         track_id = urlparse(url).path.split("/")[-1]
+        return Spotify(requests.get(
+            f"https://api.spotify.com/v1/tracks/{track_id}",
+            headers=self.HEADERS_SEARCH
+        ).json(), TYPE_TRACK)
 
     def get_playlist(self, url: str) -> Spotify:
         playlist_id = urlparse(url).path.split("/")[-1]

@@ -26,7 +26,7 @@ def main():
     yt_apps = YoutubeAppsBuilder()
 
     # get playlist
-    print("Get Tracks")
+    print("Get Track/-s")
     spotify = SpotifyAPI(
         spotify_api_id,
         spotify_api_secret
