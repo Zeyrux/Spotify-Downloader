@@ -160,9 +160,14 @@ class SpotifyAPI:
     def get_tracks(self, url: str) -> Spotify:
         if "playlist" in url:
             return self.get_playlist(url)
-        elif "album" in url:
+        if "album" in url:
             return self.get_album(url)
+        if "track" in url:
+            return self.get_track(url)
         raise Exception("Could not get tracks from Spotify")
+
+    def get_track(self, url: str) -> Spotify:
+        track_id = urlparse(url).path.split("/")[-1]
 
     def get_playlist(self, url: str) -> Spotify:
         playlist_id = urlparse(url).path.split("/")[-1]

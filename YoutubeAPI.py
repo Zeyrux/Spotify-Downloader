@@ -37,15 +37,15 @@ class YoutubeAPI:
     def _search_tracks_youtube(self, args) -> dict:
         for i in count():
             try:
-                if i == len(self.yt_apps):
+                if i == round(len(self.yt_apps) * 1.5):
                     print("MAX QUOTA REACHED!\n"
                           "add more keys or wait some time...")
                     exit(-1)
                 a = self.yt_apps.get_app().search().list(part="snippet",
                                                          **args).execute()
                 return a
-            except HttpError as e:
-                time.sleep(0.1)
+            except HttpError:
+                time.sleep(0.25)
 
     def _get_best_song(self,
                        track: "Track",
