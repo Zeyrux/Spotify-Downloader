@@ -1,6 +1,9 @@
 import time
 from itertools import count
 
+from GUI.Exceptions import create_exit_exception,\
+    create_song_not_found_exception
+
 from googleapiclient.errors import HttpError
 import pytube
 
@@ -22,7 +25,7 @@ GET_BEST_SONGS_ARGS = [
         "artists_intitle": False
     }, {
         "max_results": 10,
-        "max_duration_difference": 15,
+        "max_duration_difference": 30,
         "name_intitle": False,
         "artists_intitle": False,
         "search_artists": False
@@ -38,9 +41,8 @@ class YoutubeAPI:
         for i in count():
             try:
                 if i == round(len(self.yt_apps) * 1.5):
-                    print("MAX QUOTA REACHED!\n"
-                          "add more keys or wait some time...")
-                    exit(-1)
+                    create_exit_exception("MAX QUOTA REACHED!\nPlease add more"
+                                          " Api´s or wait some time")
                 a = self.yt_apps.get_app().search().list(part="snippet",
                                                          **args).execute()
                 return a
@@ -48,7 +50,7 @@ class YoutubeAPI:
                 time.sleep(0.25)
 
     def _get_best_song(self,
-                       track: "Track",
+                       track,
                        order: str,
                        max_results=10,
                        max_duration_difference=15,
@@ -86,4 +88,4 @@ class YoutubeAPI:
                 return track_pyt
 
         # if nothing was found raise exception
-        raise Exception("Could´t find any song at youtube")
+        create_song_not_found_exception(track.get_name())

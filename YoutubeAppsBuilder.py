@@ -2,7 +2,7 @@ from googleapiclient.discovery import build
 
 
 class YoutubeAppsBuilder:
-    def __init__(self, keys_path="youtube_api_keys.txt"):
+    def __init__(self, keys_path="API\\youtube_api_keys.txt"):
         self.keys_path = keys_path
         self.apps = []
         for key in open(keys_path, "r").readlines():

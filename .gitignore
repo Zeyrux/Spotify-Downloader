@@ -2,6 +2,6 @@
 venv
 .idea
 Temp
-spotify_api_keys.txt
-youtube_api_keys.txt
+API/spotify_api_keys.txt
+API/youtube_api_keys.txt
 test.py
