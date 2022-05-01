@@ -1,6 +1,8 @@
 import datetime as dt
 import base64
 import requests
+from itertools import count
+
 
 from urllib.parse import urlparse
 from Downloader import replace_illegal_chars
@@ -32,8 +34,9 @@ class AccessToken:
 
 
 class TrackPlaylist:
-    def __init__(self, spotify_track: dict):
+    def __init__(self, spotify_track: dict, id: int):
         self.track = spotify_track
+        self.id = id
 
     def get_album_thumbnail_url(self) -> str:
         return self.track["track"]["album"]["images"][0]["url"]
@@ -69,9 +72,10 @@ class TrackPlaylist:
 
 
 class TrackAlbum:
-    def __init__(self, spotify_track: dict, album: dict):
+    def __init__(self, spotify_track: dict, album: dict, id: int):
         self.track = spotify_track
         self.album = album
+        self.id = id
 
     def get_album_thumbnail_url(self) -> str:
         return self.album["images"][0]["url"]
@@ -107,8 +111,9 @@ class TrackAlbum:
 
 
 class TrackSingle:
-    def __init__(self, spotify_track: dict):
+    def __init__(self, spotify_track: dict, id: int):
         self.track = spotify_track
+        self.id = id
 
     def get_album_thumbnail_url(self) -> str:
         return self.track["album"]["images"][0]["url"]
@@ -144,9 +149,10 @@ class TrackSingle:
 
 
 class Spotify:
-    def __init__(self, spotify_response: dict, type: str, album=None):
+    def __init__(self, spotify_response: dict, type: str, id: int, album=None):
         self.spotify = spotify_response
         self.album = album
+        self.id = id
         self.type = type
 
     def get_name(self) -> str:
@@ -159,13 +165,22 @@ class Spotify:
 
     def get_generator_tracks(self):
         if self.type == TYPE_PLAYLIST:
-            for track in self.spotify["tracks"]["items"]:
-                yield TrackPlaylist(track)
+            for track, id in zip(self.spotify["tracks"]["items"],
+                                 count(start=self.id)):
+                yield TrackPlaylist(track, id)
         if self.type == TYPE_ALBUM:
-            for track in self.spotify["items"]:
+            for track, id in zip(self.spotify["items"], count(start=self.id)):
                 yield TrackAlbum(track, self.album)
         if self.type == TYPE_TRACK:
-            yield TrackSingle(self.spotify)
+            yield TrackSingle(self.spotify, self.id)
+
+    def __len__(self):
+        if self.type == TYPE_PLAYLIST:
+            return len(self.spotify["tracks"]["items"])
+        if self.type == TYPE_ALBUM:
+            return len(self.spotify["items"])
+        if self.type == TYPE_TRACK:
+            return 1
 
 
 class SpotifyAPI:
@@ -175,7 +190,8 @@ class SpotifyAPI:
 
     TOKEN_DATA = {"grant_type": "client_credentials"}
 
-    def __init__(self, client_id: str, client_secret: str):
+    def __init__(self, client_id: str, client_secret: str, track_id: int):
+        self.track_id = track_id
         self.CLIENT_ID = client_id
         self.CLIENT_SECRET = client_secret
         self.CLIENT_CREDS = f"{client_id}:{client_secret}"
@@ -213,14 +229,14 @@ class SpotifyAPI:
         return Spotify(requests.get(
             f"https://api.spotify.com/v1/tracks/{track_id}",
             headers=self.HEADERS_SEARCH
-        ).json(), TYPE_TRACK)
+        ).json(), TYPE_TRACK, self.track_id)
 
     def get_playlist(self, url: str) -> Spotify:
         playlist_id = urlparse(url).path.split("/")[-1]
         return Spotify(requests.get(
             f"https://api.spotify.com/v1/playlists/{playlist_id}",
             headers=self.HEADERS_SEARCH
-        ).json(), TYPE_PLAYLIST)
+        ).json(), TYPE_PLAYLIST, self.track_id)
 
     def get_album(self, url: str) -> Spotify:
         album_id = urlparse(url).path.split("/")[-1]
@@ -232,4 +248,4 @@ class SpotifyAPI:
             f"https://api.spotify.com/v1/albums/{album_id}",
             headers=self.HEADERS_SEARCH
         ).json()
-        return Spotify(tracks, TYPE_ALBUM, album=album)
+        return Spotify(tracks, TYPE_ALBUM, self.track_id, album=album)

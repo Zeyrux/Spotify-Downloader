@@ -29,29 +29,25 @@ class Downloader:
                  video: pytube.YouTube,
                  spotify,
                  target: str,
-                 clear_temp=True):
+                 pipe: "multiprocessing.connection.PipeConnection"):
         assert os.path.isdir(target)
 
         self.video = video
         self.spotify = spotify
         self.target = target
-
-        pathlib.Path(PATH_TEMP).mkdir(parents=True, exist_ok=True)
-        if clear_temp:
-            for file in os.listdir(PATH_TEMP):
-                os.remove(os.path.join(PATH_TEMP, file))
+        self.pipe = pipe
 
     def download_song(self):
-        print("Download song")
+        self.pipe.send(self.spotify.id)
         self.video.streams.get_audio_only().download(
             PATH_TEMP,
             self.spotify.get_filename() + FILE_SUFFIX_DOWNLOAD
         )
-        print("Format song")
+        self.pipe.send(self.spotify.id)
         self._format_song()
-        print("Add song data")
+        self.pipe.send(self.spotify.id)
         self._add_song_data()
-        print("Add thumbnail")
+        self.pipe.send(self.spotify.id)
         self._add_thumbnail()
 
     def _format_song(self):
