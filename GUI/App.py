@@ -67,6 +67,7 @@ class Worker(QThread):
     signal_increase_track_id = pyqtSignal(object)
     signal_create_progress_bar = pyqtSignal(object)
     signal_update_progress_bar = pyqtSignal(object)
+    signal_finish = pyqtSignal(object)
     download_path_with_dir: str = ""
     spotify: "Spotify"
 
@@ -90,9 +91,15 @@ class Worker(QThread):
     def connect_update_progress_bar(self, fn):
         self.signal_update_progress_bar.connect(fn)
 
+    def connect_finish(self, fn):
+        self.signal_finish.connect(fn)
+
     def reply_pipe(self, parent_conn: "mp.connection.PipeConnection"):
-        for i in range(2, 9):
+        for i in range(2, 8):
             self.signal_update_progress_bar.emit(parent_conn.recv())
+        track_id = parent_conn.recv()
+        self.signal_update_progress_bar.emit(track_id)
+        self.signal_finish.emit(track_id)
 
     def get_tracks(self):
         self.spotify = self.api.get_tracks(self.url)
@@ -160,10 +167,10 @@ class App(QMainWindow):
         self.input_widget.setLayout(self.input_layout)
 
         # final layout
-        self.layout = QVBoxLayout()
-        self.layout.addWidget(self.input_widget)
+        self.app_layout = QVBoxLayout()
+        self.app_layout.addWidget(self.input_widget)
         self.widget = QWidget()
-        self.widget.setLayout(self.layout)
+        self.widget.setLayout(self.app_layout)
 
         self.setStyleSheet(STYLESHEET)
         self.setCentralWidget(self.widget)
@@ -182,13 +189,19 @@ class App(QMainWindow):
             self.create_progress_bar
         )
         self.worker.connect_update_progress_bar(self.update_progressbar)
-        # https://pyshine.com/Working-with-multiple-threads-in-PyQt5/
+        self.worker.connect_finish(self.remove_progressbar)
 
     def increase_track_id(self, val: int):
         self.cur_track_id += val
 
     def update_progressbar(self, id: int):
         self.progress_bars[id].setValue(self.progress_bars[id].value() + 1)
+
+    def remove_progressbar(self, id: int):
+        for i in range(self.app_layout.count()):
+            widget = self.app_layout.itemAt(i).widget()
+            if widget.objectName() == f"progressbar-{id}":
+                widget.setParent(None)
 
     def create_progress_bar(self, track):
         progress_bar = QProgressBar()
@@ -197,7 +210,8 @@ class App(QMainWindow):
         progress_bar.setMaximumSize(500, 50)
         progress_bar.setFormat(track.get_filename())
         progress_bar.setValue(1)
-        self.layout.addWidget(progress_bar)
+        progress_bar.setObjectName(f"progressbar-{track.id}")
+        self.app_layout.addWidget(progress_bar)
         self.progress_bars[track.id] = progress_bar
 
     def clear_temp(self):
