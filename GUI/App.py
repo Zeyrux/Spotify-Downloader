@@ -10,6 +10,8 @@ from API.YoutubeAPI import YoutubeAPI
 from Downloader import Downloader, replace_illegal_chars, PATH_TEMP
 from YoutubeAppsBuilder import YoutubeAppsBuilder
 
+from PyQt6.QtGui import QResizeEvent
+from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QMainWindow,
     QVBoxLayout,
@@ -60,50 +62,41 @@ def download_loop(track,
     pipe.send(track.id)
 
 
-class App(QMainWindow):
+class Worker(QThread):
 
-    spotify: "Spotify" = None
-    download_path_with_dir: str = None
-    spotify_api_id, spotify_api_secret = get_spotify_client_id_and_secret()
-    yt_apps = YoutubeAppsBuilder()
-    progress_bars = {}
-    pipes = {}
-    cur_track_id = 0
+    signal_increase_track_id = pyqtSignal(object)
+    signal_create_progress_bar = pyqtSignal(object)
+    signal_update_progress_bar = pyqtSignal(object)
+    download_path_with_dir: str = ""
+    spotify: "Spotify"
 
-    def __init__(self):
+    def __init__(self, spotfiy_api: SpotifyAPI,
+                 url: str,
+                 yt_apps: "YoutubeAppsBuilder"):
         super().__init__()
-        self.setWindowTitle("Spotify Downloader ⭳")
-        self.clear_temp()
+        self.api = spotfiy_api
+        self.url = url
+        self.yt_apps = yt_apps
 
-        # url input
-        self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText("Link")
-        self.download_button = QPushButton("⭳")
-        self.download_button.clicked.connect(self.get_tracks)
+    def run(self):
+        self.get_tracks()
 
-        self.input_layout = QHBoxLayout()
-        self.input_layout.addWidget(self.url_input)
-        self.input_layout.addWidget(self.download_button)
-        self.input_widget = QWidget()
-        self.input_widget.setLayout(self.input_layout)
+    def connect_increase_track_id(self, fn):
+        self.signal_increase_track_id.connect(fn)
 
-        # final layout
-        self.layout = QVBoxLayout()
-        self.layout.addWidget(self.input_widget)
-        self.widget = QWidget()
-        self.widget.setLayout(self.layout)
+    def connect_create_progress_bar(self, fn):
+        self.signal_create_progress_bar.connect(fn)
 
-        self.setStyleSheet(STYLESHEET)
-        self.setCentralWidget(self.widget)
+    def connect_update_progress_bar(self, fn):
+        self.signal_update_progress_bar.connect(fn)
+
+    def reply_pipe(self, parent_conn: "mp.connection.PipeConnection"):
+        for i in range(2, 9):
+            self.signal_update_progress_bar.emit(parent_conn.recv())
 
     def get_tracks(self):
-        url = self.url_input.text()
-        self.spotify = SpotifyAPI(
-            self.spotify_api_id,
-            self.spotify_api_secret,
-            self.cur_track_id
-        ).get_tracks(url)
-        self.cur_track_id += len(self.spotify)
+        self.spotify = self.api.get_tracks(self.url)
+        self.signal_increase_track_id.emit(len(self.spotify))
 
         # declare download path and create if necessary
         self.download_path_with_dir = os.path.join(
@@ -114,8 +107,11 @@ class App(QMainWindow):
             os.path.join(self.download_path_with_dir)
         ).mkdir(exist_ok=True, parents=True)
 
-        self.create_progress_bars()
-        # self.start_downloading()
+        # create progress bars
+        for track in self.spotify.get_generator_tracks():
+            self.signal_create_progress_bar.emit(track)
+
+        self.start_downloading()
 
     def start_downloading(self):
         # iterate through each track and add process that download it
@@ -134,23 +130,84 @@ class App(QMainWindow):
         for proc in procs:
             proc.start()
 
-    def reply_pipe(self, parent_conn: "mp.connection.PipeConnection"):
-        for i in range(2, 9):
-            self.progress_bars[parent_conn.recv()].setValue(i)
 
-    def create_progress_bars(self):
-        for track in self.spotify.get_generator_tracks():
-            progress_bar = QProgressBar()
-            progress_bar.setMaximum(8)
-            progress_bar.setFormat(track.get_filename())
-            progress_bar.setValue(1)
-            self.layout.addWidget(progress_bar)
-            self.progress_bars[track.id] = progress_bar
+class App(QMainWindow):
+
+    # spotify: "Spotify" = None
+    worker: Worker = None
+    # download_path_with_dir: str = None
+    spotify_api_id, spotify_api_secret = get_spotify_client_id_and_secret()
+    yt_apps = YoutubeAppsBuilder()
+    progress_bars = {}
+    # pipes = {}
+    cur_track_id = 0
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Spotify Downloader ⭳")
+        self.clear_temp()
+
+        # url input
+        self.url_input = QLineEdit()
+        self.url_input.setPlaceholderText("Link")
+        self.download_button = QPushButton("⭳")
+        self.download_button.clicked.connect(self.start_get_tracks)
+
+        self.input_layout = QHBoxLayout()
+        self.input_layout.addWidget(self.url_input)
+        self.input_layout.addWidget(self.download_button)
+        self.input_widget = QWidget()
+        self.input_widget.setLayout(self.input_layout)
+
+        # final layout
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.input_widget)
+        self.widget = QWidget()
+        self.widget.setLayout(self.layout)
+
+        self.setStyleSheet(STYLESHEET)
+        self.setCentralWidget(self.widget)
+
+    def start_get_tracks(self):
+        spotify_api = SpotifyAPI(
+            self.spotify_api_id,
+            self.spotify_api_secret,
+            self.cur_track_id
+        )
+        url = self.url_input.text()
+        self.worker = Worker(spotify_api, url, self.yt_apps)
+        self.worker.start()
+        self.worker.connect_increase_track_id(self.increase_track_id)
+        self.worker.connect_create_progress_bar(
+            self.create_progress_bar
+        )
+        self.worker.connect_update_progress_bar(self.update_progressbar)
+        # https://pyshine.com/Working-with-multiple-threads-in-PyQt5/
+
+    def increase_track_id(self, val: int):
+        self.cur_track_id += val
+
+    def update_progressbar(self, id: int):
+        self.progress_bars[id].setValue(self.progress_bars[id].value() + 1)
+
+    def create_progress_bar(self, track):
+        progress_bar = QProgressBar()
+        progress_bar.setMaximum(8)
+        progress_bar.setMinimumSize(500, 50)
+        progress_bar.setMaximumSize(500, 50)
+        progress_bar.setFormat(track.get_filename())
+        progress_bar.setValue(1)
+        self.layout.addWidget(progress_bar)
+        self.progress_bars[track.id] = progress_bar
 
     def clear_temp(self):
         pathlib.Path(PATH_TEMP).mkdir(parents=True, exist_ok=True)
         for file in os.listdir(PATH_TEMP):
             os.remove(os.path.join(PATH_TEMP, file))
+
+    def resizeEvent(self, a0: QResizeEvent) -> None:
+        print(a0.size())
+        print(self.screen().size())
 
 
 def create_app():
