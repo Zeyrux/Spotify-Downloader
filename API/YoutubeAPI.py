@@ -1,7 +1,7 @@
 import time
 from itertools import count
 
-from GUI.Exceptions import create_exit_exception,\
+from GUI.Exceptions_and_layout import create_exit_exception,\
     create_song_not_found_exception
 
 from googleapiclient.errors import HttpError

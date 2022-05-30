@@ -9,8 +9,8 @@ from API.SpotifyAPI import SpotifyAPI
 from API.YoutubeAPI import YoutubeAPI
 from Downloader import Downloader, replace_illegal_chars, PATH_TEMP
 from YoutubeAppsBuilder import YoutubeAppsBuilder
+from GUI.Exceptions_and_layout import LayoutProgressBar
 
-from PyQt6.QtGui import QResizeEvent
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QMainWindow,
@@ -19,10 +19,8 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QLineEdit,
     QApplication,
-    QProgressBar,
     QWidget
 )
-
 
 PATH_STYLESHEET = os.path.join("Styles", "style.css")
 STYLE_APP = "Fusion"
@@ -30,7 +28,8 @@ STYLESHEET = open(PATH_STYLESHEET, "r").read()
 PATH_DOWNLOAD = os.path.join(os.path.expanduser("~"), "downloads")
 
 
-def get_spotify_client_id_and_secret(path="API\\spotify_api_keys.txt") -> tuple:
+def get_spotify_client_id_and_secret(
+        path="API\\spotify_api_keys.txt") -> tuple:
     if not os.path.isfile(path):
         raise FileNotFoundError(path)
     return tuple(open(path, "r").read().split("\n"))
@@ -63,7 +62,6 @@ def download_loop(track,
 
 
 class Worker(QThread):
-
     signal_increase_track_id = pyqtSignal(object)
     signal_create_progress_bar = pyqtSignal(object)
     signal_update_progress_bar = pyqtSignal(object)
@@ -138,21 +136,23 @@ class Worker(QThread):
             proc.start()
 
 
+def clear_temp():
+    pathlib.Path(PATH_TEMP).mkdir(parents=True, exist_ok=True)
+    for file in os.listdir(PATH_TEMP):
+        os.remove(os.path.join(PATH_TEMP, file))
+
+
 class App(QMainWindow):
 
-    # spotify: "Spotify" = None
-    worker: Worker = None
-    # download_path_with_dir: str = None
+    workers: list[Worker] = []
     spotify_api_id, spotify_api_secret = get_spotify_client_id_and_secret()
     yt_apps = YoutubeAppsBuilder()
-    progress_bars = {}
-    # pipes = {}
     cur_track_id = 0
 
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Spotify Downloader ⭳")
-        self.clear_temp()
+        clear_temp()
 
         # url input
         self.url_input = QLineEdit()
@@ -165,6 +165,8 @@ class App(QMainWindow):
         self.input_layout.addWidget(self.download_button)
         self.input_widget = QWidget()
         self.input_widget.setLayout(self.input_layout)
+        self.input_widget.setMaximumHeight(self.screen().size().height() // 15)
+        self.input_widget.setMinimumHeight(self.screen().size().height() // 15)
 
         # final layout
         self.app_layout = QVBoxLayout()
@@ -174,6 +176,21 @@ class App(QMainWindow):
 
         self.setStyleSheet(STYLESHEET)
         self.setCentralWidget(self.widget)
+        #
+        # # set fixed size
+        # self.input_width = self.width()
+        # self.input_height = self.screen().size().height() // 15
+        # self.widget.setMinimumHeight(self.input_height)
+        # self.widget.setMaximumHeight(self.input_height)
+        # self.setFixedSize(self.input_width, self.input_height)
+
+        # progress bars
+        self.progress_bars = LayoutProgressBar(
+            self,
+            self.input_widget.width(),
+            self.input_widget.height()
+        )
+        self.app_layout.addWidget(self.progress_bars)
 
     def start_get_tracks(self):
         spotify_api = SpotifyAPI(
@@ -182,46 +199,43 @@ class App(QMainWindow):
             self.cur_track_id
         )
         url = self.url_input.text()
-        self.worker = Worker(spotify_api, url, self.yt_apps)
-        self.worker.start()
-        self.worker.connect_increase_track_id(self.increase_track_id)
-        self.worker.connect_create_progress_bar(
-            self.create_progress_bar
+
+        # create, start, connect worker
+        self.workers.append(Worker(spotify_api, url, self.yt_apps))
+        self.workers[-1].start()
+        self.workers[-1].connect_increase_track_id(self.increase_track_id)
+        self.workers[-1].connect_create_progress_bar(
+            self.progress_bars.create_progress_bar
         )
-        self.worker.connect_update_progress_bar(self.update_progressbar)
-        self.worker.connect_finish(self.remove_progressbar)
+        self.workers[-1].connect_update_progress_bar(
+            self.progress_bars.update_progressbar
+        )
+        self.workers[-1].connect_finish(
+            self.progress_bars.remove_progressbar
+        )
 
     def increase_track_id(self, val: int):
         self.cur_track_id += val
 
-    def update_progressbar(self, id: int):
-        self.progress_bars[id].setValue(self.progress_bars[id].value() + 1)
-
-    def remove_progressbar(self, id: int):
-        for i in range(self.app_layout.count()):
-            widget = self.app_layout.itemAt(i).widget()
-            if widget.objectName() == f"progressbar-{id}":
-                widget.setParent(None)
-
-    def create_progress_bar(self, track):
-        progress_bar = QProgressBar()
-        progress_bar.setMaximum(8)
-        progress_bar.setMinimumSize(500, 50)
-        progress_bar.setMaximumSize(500, 50)
-        progress_bar.setFormat(track.get_filename())
-        progress_bar.setValue(1)
-        progress_bar.setObjectName(f"progressbar-{track.id}")
-        self.app_layout.addWidget(progress_bar)
-        self.progress_bars[track.id] = progress_bar
-
-    def clear_temp(self):
-        pathlib.Path(PATH_TEMP).mkdir(parents=True, exist_ok=True)
-        for file in os.listdir(PATH_TEMP):
-            os.remove(os.path.join(PATH_TEMP, file))
-
-    def resizeEvent(self, a0: QResizeEvent) -> None:
-        print(a0.size())
-        print(self.screen().size())
+    # def resize_app(self, progress_bar=None):
+    #     if len(self.progress_bars) == 0:
+    #         self.setFixedHeight(self.input_height)
+    #         return
+    #     new_y = self.input_height + self.progress_bars_y
+    #     if new_y + self.y() > self.screen().size().height():
+    #         y = self.screen().size().height() - self.y() - self.input_height
+    #         cnt_progress_bars_per_row = y // self.progress_bars[0].height()
+    #         max_rows = math.ceil(len(self.progress_bars)
+    #                                    / cnt_progress_bars_per_row)
+    #
+    #         # create each row
+    #         if max_rows == len(self.progress_bars_layouts):
+    #             return
+    #         for row in range(max_rows):
+    #             if self.progress_bars_layouts:
+    #                 pass
+    #                 # hier weitermachen!!!!!!!!!!!!!!!!!!
+    #     self.setFixedHeight(new_y)
 
 
 def create_app():
