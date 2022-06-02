@@ -72,9 +72,9 @@ class Downloader:
         if file.tag is None:
             file.initTag()
 
-        file.tag.artist = ", ".join(self.spotify.get_artist_names())
+        file.tag.artist = "; ".join(self.spotify.get_artist_names())
         file.tag.album = self.spotify.get_album_name()
-        file.tag.album_artist = ", ".join(
+        file.tag.album_artist = "; ".join(
             self.spotify.get_album_artist_names()
         )
         file.tag.title = self.spotify.get_name()
